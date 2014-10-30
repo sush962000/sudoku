@@ -20,7 +20,7 @@ class Board:
       for c in row: assert 0 <= int(c) <= 9
 
   def write(self, f):
-    "Write grid to stdout."
+    "Write grid to the given file."
     writer = csv.writer(f)
     for row in self.grid: writer.writerow(row)
 
