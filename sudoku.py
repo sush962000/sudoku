@@ -8,16 +8,39 @@ class Board:
   def __init__(self, grid=None):
     self.grid = grid
 
-  def read(self, filename):
-    "Read grid from the given filename."
-    with open(filename) as f:
-      reader = csv.reader(f)
-      self.grid = [row for row in reader]
+  @staticmethod
+  def peers(x, y):
+    "Returns coordinates for the peers of the given cell."
+    # Columns.
+    for j in range(0, 9):
+      if j == y: continue
+      yield x, j
+    # Rows.
+    for i in range(0, 9):
+      if i == x: continue
+      yield i, y
+    # Block.
+    bx = 3 * (x / 3)
+    by = 3 * (y / 3)
+    for i in range(bx, bx + 3):
+      for j in range(by, by + 3):
+        if i == x or j == y: continue
+        yield i, j
+
+  def read(self, f):
+    "Read grid from the given file."
+    reader = csv.reader(f)
+    self.grid = [row for row in reader]
     # Validate givens.
-    assert len(self.grid) == 9
+    if len(self.grid) != 9:
+      return False
     for row in self.grid:
-      assert len(row) == 9
-      for c in row: assert 0 <= int(c) <= 9
+      if len(row) != 9:
+        return False
+      for c in row:
+        if not 0 <= int(c) <= 9:
+          return False
+    return True
 
   def write(self, f):
     "Write grid to the given file."
@@ -30,35 +53,46 @@ def solve(board):
     for j in range(9):
       c = board.grid[i][j]
       if c == '0': continue
-      assign(grid, i, j, c)
+      if not assign(grid, i, j, c):
+        return None
   return Board(grid)
 
-def assign(grid, i, j, c):
-  #print '{0},{1}'.format(i, j)
+def assign(grid, x, y, c):
   # Assign value to the given cell.
-  grid[i][j] = c
-  # Remove from row.
-  for k in range(0, 9):
-    if k == j: continue
-    grid[i][k] = grid[i][k].replace(c, '')
-  # Remove from column.
-  for k in range(0, 9):
-    if k == i: continue
-    grid[k][j] = grid[k][j].replace(c, '')
-  # Remove from block.
-  b_i = 3 * (i / 3)
-  b_j = 3 * (j / 3)
-  for p in range(b_i, b_i+3):
-    for q in range(b_j, b_j+3):
-      if p == i and q == j: continue
-      grid[p][q] = grid[p][q].replace(c, '')
+  grid[x][y] = c
+  # Remove this value from the cell unit.
+  # If another cell becomes single-valued in the process, recurse.
+  singles = [(x, y)]
+  while singles:
+    x, y = singles.pop()
+    c = grid[x][y]
+    for i, j in Board.peers(x, y):
+      if c not in grid[i][j]: continue
+      grid[i][j] = grid[i][j].replace(c, '')
+      if len(grid[i][j]) == 0:
+        return False
+      if len(grid[i][j]) == 1:
+        singles.append((i,j))
+  return True
 
-if __name__ == '__main__':
+def main():
   board_in = Board()
-  board_in.read(sys.argv[1])
+  with open(sys.argv[1]) as f:
+    if not board_in.read(f):
+      print "Invalid input."
+      return 1
   print "Input"
   board_in.write(sys.stdout)
 
   board_out = solve(board_in)
+  if not board_out:
+    print "Improper puzzle."
+    return 1
   print "Output"
   board_out.write(sys.stdout)
+  return 0
+
+
+if __name__ == '__main__':
+  status = main()
+  sys.exit(status)
