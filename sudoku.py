@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import copy
 import csv
 import sys
 
@@ -70,10 +71,10 @@ def search(grid):
   n, i, j = min((len(grid[i][j]), i, j) for i in range(9) for j in range(9)
             if len(grid[i][j]) > 1)
   for c in grid[i][j]:
-    grid = grid.copy()
-    if not assign(grid, i, j, c): continue
-    grid = search(grid)
-    if grid: return grid
+    grid_copy = copy.deepcopy(grid)
+    if not assign(grid_copy, i, j, c): continue
+    grid_solved = search(grid_copy)
+    if grid_solved: return grid_solved
   return None
 
 def assign(grid, x, y, c):
