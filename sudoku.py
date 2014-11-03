@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 
-import copy
 import csv
 import sys
 
 
 class Board:
   def __init__(self, grid=None):
+    if not grid:
+      grid = [['123456789' for i in range(9)] for j in range(9)]
     self.grid = grid
 
   @staticmethod
@@ -31,15 +32,18 @@ class Board:
   def read(self, f):
     "Read grid from the given file."
     reader = csv.reader(f)
-    self.grid = [row for row in reader]
-    # Validate givens.
-    if len(self.grid) != 9:
+    grid = [row for row in reader]
+    if len(grid) != 9:
       return False
-    for row in self.grid:
+
+    for i, row in enumerate(grid):
       if len(row) != 9:
         return False
-      for c in row:
-        if not 0 <= int(c) <= 9:
+      for j, d in enumerate(row):
+        if not 0 <= int(d) <= 9:
+          return False
+        if d == '0': continue
+        if not self.assign(i, j, d):
           return False
     return True
 
@@ -48,52 +52,59 @@ class Board:
     writer = csv.writer(f)
     for row in self.grid: writer.writerow(row)
 
-def solve(board):
-  grid = [['123456789' for i in range(9)] for j in range(9)]
-  for i in range(9):
-    for j in range(9):
-      c = board.grid[i][j]
-      if c == '0': continue
-      if not assign(grid, i, j, c):
-        return None
-  grid = search(grid)
-  return Board(grid) if grid else None
+  def copy(self):
+    "Returns a copy of this board."
+    return Board([row[:] for row in self.grid])
 
-def search(grid):
+  def cell(self, x, y):
+    "Returns the current value of the current cell."
+    return self.grid[x][y]
+
+  def solved(self):
+    "Returns True if the board is already solved."
+    return all(len(self.grid[i][j]) == 1 for i in range(9) for j in range(9))
+
+  def assign(self, x, y, d):
+    """Assigns d to the cell at (x,y).
+       Returns True if the value can be assigned without violating rules"""
+    self.grid[x][y] = d
+    # Remove this value from the cell unit.
+    # If another cell becomes single-valued in the process, recurse.
+    singles = [(x, y)]
+    while singles:
+      x, y = singles.pop()
+      d = self.grid[x][y]
+      for i, j in Board.peers(x, y):
+        if d not in self.grid[i][j]: continue
+        self.grid[i][j] = self.grid[i][j].replace(d, '')
+        if len(self.grid[i][j]) == 0:
+          return False
+        if len(self.grid[i][j]) == 1:
+          singles.append((i,j))
+    return True
+
+
+def solve(board):
+  "Solve the sudoku puzzle for the given board."
   # Check for violation.
-  if not grid:
+  if not board:
     return None
 
   # Check if the puzzle is already solved.
-  if all(len(grid[i][j]) == 1 for i in range(9) for j in range(9)):
-    return grid
+  if board.solved():
+    return board
 
-  n, i, j = min((len(grid[i][j]), i, j) for i in range(9) for j in range(9)
-            if len(grid[i][j]) > 1)
-  for c in grid[i][j]:
-    grid_copy = copy.deepcopy(grid)
-    if not assign(grid_copy, i, j, c): continue
-    grid_solved = search(grid_copy)
-    if grid_solved: return grid_solved
+  n, i, j = min((len(board.cell(i,j)), i, j) for i in range(9) for j in range(9)
+            if len(board.cell(i,j)) > 1)
+  for d in board.cell(i, j):
+    board_copy = board.copy()
+    if not board_copy.assign(i, j, d):
+      continue
+    board_solved = solve(board_copy)
+    if board_solved:
+      return board_solved
   return None
 
-def assign(grid, x, y, c):
-  # Assign value to the given cell.
-  grid[x][y] = c
-  # Remove this value from the cell unit.
-  # If another cell becomes single-valued in the process, recurse.
-  singles = [(x, y)]
-  while singles:
-    x, y = singles.pop()
-    c = grid[x][y]
-    for i, j in Board.peers(x, y):
-      if c not in grid[i][j]: continue
-      grid[i][j] = grid[i][j].replace(c, '')
-      if len(grid[i][j]) == 0:
-        return False
-      if len(grid[i][j]) == 1:
-        singles.append((i,j))
-  return True
 
 def main():
   board_in = Board()
@@ -106,7 +117,7 @@ def main():
 
   board_out = solve(board_in)
   if not board_out:
-    print "Improper puzzle."
+    print "Invalid puzzle."
     return 1
   print "Output"
   board_out.write(sys.stdout)
@@ -114,5 +125,4 @@ def main():
 
 
 if __name__ == '__main__':
-  status = main()
-  sys.exit(status)
+  sys.exit(main())

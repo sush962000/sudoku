@@ -30,6 +30,7 @@ def generate_solver_test(filepath):
 
       board_out = sudoku.solve(board_in)
       self.assertIsNotNone(board_out)
+      self.assertTrue(board_out.solved())
   return test
 
 
