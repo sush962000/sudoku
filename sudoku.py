@@ -55,7 +55,26 @@ def solve(board):
       if c == '0': continue
       if not assign(grid, i, j, c):
         return None
-  return Board(grid)
+  grid = search(grid)
+  return Board(grid) if grid else None
+
+def search(grid):
+  # Check for violation.
+  if not grid:
+    return None
+
+  # Check if the puzzle is already solved.
+  if all(len(grid[i][j]) == 1 for i in range(9) for j in range(9)):
+    return grid
+
+  n, i, j = min((len(grid[i][j]), i, j) for i in range(9) for j in range(9)
+            if len(grid[i][j]) > 1)
+  for c in grid[i][j]:
+    grid = grid.copy()
+    if not assign(grid, i, j, c): continue
+    grid = search(grid)
+    if grid: return grid
+  return None
 
 def assign(grid, x, y, c):
   # Assign value to the given cell.
