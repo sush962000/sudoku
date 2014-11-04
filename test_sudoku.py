@@ -8,18 +8,40 @@ import sudoku
 
 
 class BoardTest(unittest.TestCase):
-  def setUp(self):
-    pass
+  def test_blank(self):
+    blank = sudoku.Board.blank()
+    for i in range(9):
+      for j in range(9):
+        self.assertEqual(blank.cell(i, j), '123456789')
 
-  def tearDown(self):
-    pass
+  def test_peer_len(self):
+    for i in range(9):
+      for j in range(9):
+        peers = [peer for peer in sudoku.Board.peers(i, j)]
+        self.assertEqual(len(peers), 20)
+
+  def test_peers_21(self):
+    expected = [
+        (2, 0), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6), (2, 7), (2, 8),
+        (0, 1), (1, 1), (3, 1), (4, 1), (5, 1), (6, 1), (7, 1), (8, 1),
+        (0, 0), (0, 2), (1, 0), (1, 2)]
+    peers = [peer for peer in sudoku.Board.peers(2, 1)]
+    self.assertEqual(peers, expected)
+
+  def test_assign(self):
+    blank = sudoku.Board.blank()
+    # Assigning values outside [1, 9] must fail
+    self.assertFalse(blank.assign(2, 1, '0'))
+    self.assertFalse(blank.assign(2, 1, '10'))
+    # Assigning valid values must pass
+    self.assertTrue(blank.assign(2, 1, '1'))
+    self.assertTrue(blank.assign(2, 0, '2'))
+    # Assiging the same value to any peer must fail
+    self.assertFalse(blank.assign(2, 8, '2'))
 
 
 class SolverTest(unittest.TestCase):
   def setUp(self):
-    pass
-
-  def tearDown(self):
     pass
 
 def generate_solver_test(filepath):
@@ -35,9 +57,7 @@ def generate_solver_test(filepath):
     expectation_filepath = filename + '_expected.csv'
     with open(expectation_filepath) as f:
       grid_expected = sudoku.read(f)
-    self.assertTrue(
-        all(grid_out[i][j] ==
-            grid_expected[i][j] for i in range(9) for j in range(9)))
+      self.assertEqual(grid_out, grid_expected)
   return test
 
 

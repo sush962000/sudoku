@@ -48,6 +48,9 @@ class Board:
   def assign(self, x, y, d):
     """Assigns d to the cell at (x,y).
        Returns True if the value can be assigned without violating rules"""
+    if not 1 <= int(d) <= 9:
+      return False
+
     self.grid[x][y] = d
     # Remove this value from the cell unit.
     # If another cell becomes single-valued in the process, recurse.
