@@ -25,12 +25,11 @@ class SolverTest(unittest.TestCase):
 def generate_solver_test(filepath):
   def test(self):
     with open(filepath) as f:
-      board_in = sudoku.Board()
-      self.assertTrue(board_in.read(f))
+      grid_in = sudoku.read(f)
+      self.assertIsNotNone(grid_in)
 
-      board_out = sudoku.solve(board_in)
-      self.assertIsNotNone(board_out)
-      self.assertTrue(board_out.solved())
+      grid_out = sudoku.solve(grid_in)
+      self.assertIsNotNone(grid_out)
   return test
 
 

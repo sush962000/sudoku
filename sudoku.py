@@ -6,9 +6,13 @@ import sys
 
 class Board:
   def __init__(self, grid=None):
-    if not grid:
-      grid = [['123456789' for i in range(9)] for j in range(9)]
     self.grid = grid
+
+  @classmethod
+  def blank(cls):
+    """Creates a blank sudoku board.
+    A blank cell is initialized with all possible values."""
+    return cls([['123456789' for i in range(9)] for j in range(9)])
 
   @staticmethod
   def peers(x, y):
@@ -28,29 +32,6 @@ class Board:
       for j in range(by, by + 3):
         if i == x or j == y: continue
         yield i, j
-
-  def read(self, f):
-    "Read grid from the given file."
-    reader = csv.reader(f)
-    grid = [row for row in reader]
-    if len(grid) != 9:
-      return False
-
-    for i, row in enumerate(grid):
-      if len(row) != 9:
-        return False
-      for j, d in enumerate(row):
-        if not 0 <= int(d) <= 9:
-          return False
-        if d == '0': continue
-        if not self.assign(i, j, d):
-          return False
-    return True
-
-  def write(self, f):
-    "Write grid to the given file."
-    writer = csv.writer(f)
-    for row in self.grid: writer.writerow(row)
 
   def copy(self):
     "Returns a copy of this board."
@@ -83,44 +64,81 @@ class Board:
           singles.append((i,j))
     return True
 
+def read(f):
+  """Read sudoku grid from the given file.
+     The missing values are represented by '0'.
+     Returns None if the given grid is invalid."""
+  reader = csv.reader(f)
+  grid = [row for row in reader]
+  # Validate givens.
+  if len(grid) != 9:
+    return None
+  for row in grid:
+    if len(row) != 9:
+      return None
+    for d in row:
+      if not 0 <= int(d) <= 9:
+        return None
+  return grid
 
-def solve(board):
-  "Solve the sudoku puzzle for the given board."
+def write(grid, f):
+    "Write grid to the given file."
+    writer = csv.writer(f)
+    for row in grid: writer.writerow(row)
+
+def solve(grid):
+  "Solve the sudoku puzzle for the given grid."
+  assert(grid)
+  board_in = Board.blank()
+  for i in range(9):
+    for j in range(9):
+      if grid[i][j] == '0':
+        continue
+      if not board_in.assign(i, j, grid[i][j]):
+        return None
+  board_out = _search(board_in)
+  return board_out.grid if board_out else None
+
+def _search(board_in):
   # Check for violation.
-  if not board:
+  if not board_in:
     return None
 
   # Check if the puzzle is already solved.
-  if board.solved():
-    return board
+  if board_in.solved():
+    return board_in
 
-  n, i, j = min((len(board.cell(i,j)), i, j) for i in range(9) for j in range(9)
-            if len(board.cell(i,j)) > 1)
-  for d in board.cell(i, j):
-    board_copy = board.copy()
-    if not board_copy.assign(i, j, d):
+  # Guess a value for one of the blank cells.
+  # Return as soon as a valid solution is found.
+  # Prioritize cells that fewer number of possible values.
+  n, x, y = min(
+      (len(board_in.cell(i, j)), i, j) for i in range(9) for j in range(9)
+          if len(board_in.cell(i, j)) > 1)
+  for d in board_in.cell(x, y):
+    board_out = board_in.copy()
+    if not board_out.assign(x, y, d):
       continue
-    board_solved = solve(board_copy)
-    if board_solved:
-      return board_solved
+    board_out = _search(board_out)
+    if board_out:
+      return board_out
   return None
 
 
 def main():
-  board_in = Board()
   with open(sys.argv[1]) as f:
-    if not board_in.read(f):
+    grid_in = read(f)
+    if not grid_in:
       print "Invalid input."
       return 1
   print "Input"
-  board_in.write(sys.stdout)
+  write(grid_in, sys.stdout)
 
-  board_out = solve(board_in)
-  if not board_out:
+  grid_out = solve(grid_in)
+  if not grid_out:
     print "Invalid puzzle."
     return 1
   print "Output"
-  board_out.write(sys.stdout)
+  write(grid_out, sys.stdout)
   return 0
 
 
